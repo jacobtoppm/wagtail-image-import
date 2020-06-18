@@ -1,0 +1,13 @@
+{% load wagtailadmin_tags %}
+{% load wagtail_image_import_tags %}
+{% load i18n %}
+{% can_import request.user as import %}
+<div class="{% if import %}dropdown dropdown-button match-width{% endif %}">
+    <a href="{% url 'wagtailimages:add_multiple' %}" class="button bicolor icon icon-plus">{% trans "Add an image" %}</a>
+    {% if import %}
+        <div class="dropdown-toggle icon icon-arrow-down"></div>
+        <ul>
+            <li><a  class="button bicolor icon icon-site" href="">{% trans 'Import from Drive' %}</a></li>
+        </ul>
+    {% endif %}
+</div>

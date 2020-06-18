@@ -1,0 +1,69 @@
+
+{% extends "wagtailimages/images/index.html" %}
+{% load wagtailadmin_tags %}
+{% load wagtailimages_tags %}
+{% load i18n %}
+
+{% block content %}
+<!-- This is a copy of the image index template (with header copied in) used to inject the additional "import from Drive" button, as unfortunately there are no hooks/blocks for doing this more easily yet -->
+    <header class="{% if merged %}merged{% endif %} {% if tabbed %}tab-merged{% endif %} {% if search_form %}hasform{% endif %}">
+        {% block breadcrumb %}{% endblock %}
+        <div class="row nice-padding">
+            <div class="left">
+                <div class="col header-title">
+                    <h1 class="icon icon-image">
+                    {% trans "Images" %}
+                </div>
+                <form class="col search-form" action="{% url 'wagtailimages:index' %}{% if query_parameters %}?{{ query_parameters }}{% endif %}" method="get" novalidate role="search">
+                    <ul class="fields">
+                        {% for field in search_form %}
+                            {% include "wagtailadmin/shared/field_as_li.html" with field=field field_classes="field-small iconfield" input_classes="icon-search" %}
+                        {% endfor %}
+                        <li class="submit visuallyhidden"><input type="submit" value="Search" class="button" /></li>
+                    </ul>
+                </form>
+            </div>
+            <div class="right">
+                <!-- This is the only differing section, with the import button -->
+                {% if user_can_add %}
+                    {% include 'wagtail_image_import/includes/import_dropdown.html' %}
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <div class="nice-padding">
+        <form class="image-search search-bar" action="{% url 'wagtailimages:index' %}" method="GET" novalidate>
+            <ul class="fields">
+                {% if collections %}
+                    {% include "wagtailadmin/shared/collection_chooser.html" %}
+                    {% if current_tag %}
+                        <input type="hidden" name="tag" value="{{ current_tag }}" />
+                    {% endif %}
+                {% endif %}
+                {% if popular_tags %}
+                <li>
+                    <fieldset class="tagfilter">
+                    <legend>{% trans 'Popular Tags:' %}</legend>
+                      {% for tag in popular_tags %}
+                          {% if tag.name != current_tag %}
+                              <a class="button button-small button-secondary bicolor icon icon-tag" href="{% url 'wagtailimages:index' %}{% querystring tag=tag.name %}">{{ tag.name }}</a>
+                          {% else %}
+                              <a class="button button-small bicolor icon icon-tag" href="{% url 'wagtailimages:index' %}{% querystring tag=tag.name %}">{{ tag.name }}</a>
+                          {% endif %}
+                      {% endfor %}
+                      {% if current_tag %}
+                          <a class="button button-small bicolor button-secondary icon icon-cross" href="{% url 'wagtailimages:index' %}{% querystring tag='' %}">{% trans 'Clear choice' %}</a>
+                      {% endif %}
+                    </fieldset>
+                </li>
+                {% endif %}
+            </ul>
+        </form>
+
+        <div id="image-results">
+            {% include "wagtailimages/images/results.html" %}
+        </div>
+    </div>
+
+{% endblock %}
