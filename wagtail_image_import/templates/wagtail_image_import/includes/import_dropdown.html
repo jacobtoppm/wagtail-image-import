@@ -7,7 +7,7 @@
     {% if import %}
         <div class="dropdown-toggle icon icon-arrow-down"></div>
         <ul>
-            <li><a  class="button bicolor icon icon-site" href="">{% trans 'Import from Drive' %}</a></li>
+            <li><a  class="button bicolor icon icon-site" href="{% url 'wagtail_image_import:import' %}">{% trans 'Import from Drive' %}</a></li>
         </ul>
     {% endif %}
 </div>
