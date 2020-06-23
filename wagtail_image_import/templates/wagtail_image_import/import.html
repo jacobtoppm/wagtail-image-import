@@ -1,6 +1,7 @@
 {% extends "wagtailadmin/base.html" %}
 {% load i18n %}
 {% load l10n %}
+{% load static %}
 {% load wagtailadmin_tags wagtailimages_tags %}
 {% block titletag %}{% trans "Import from Drive" %}{% endblock %}
 {% block extra_css %}
@@ -15,7 +16,7 @@
     {% trans "Import from Drive" as add_str %}
     {% include "wagtailadmin/shared/header.html" with title=add_str icon="image" %}
 
-    <div class="nice-padding" id="import-container">
+    <div class="nice-padding" id="importer" data-app-id="{{ app_id }}" data-picker-api-key="{{ picker_api_key }}" data-client-id="{{ client_id }}">
 
     </div>
 {% endblock %}
@@ -34,7 +35,8 @@
     <script src="{% versioned_static 'wagtailimages/js/vendor/jquery.fileupload-image.js' %}"></script>
     <script src="{% versioned_static 'wagtailimages/js/vendor/jquery.fileupload-validate.js' %}"></script>
     <script src="{% versioned_static 'wagtailadmin/js/vendor/tag-it.js' %}"></script>
-
+    <script src="https://apis.google.com/js/api.js"></script>
     <!-- Main script -->
-    
+    <script defer src="{% static 'wagtail_image_import/js/importer.js' %}" ></script>
+
 {% endblock %}
