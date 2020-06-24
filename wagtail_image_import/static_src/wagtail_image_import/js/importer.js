@@ -111,7 +111,6 @@ function DriveSelector(props) {
             });
         });
       }
-      console.log(imageData);
     }
   }
 
