@@ -4,6 +4,7 @@ const Icon = window.wagtail.components.Icon;
 
 function Importer(props) {
   const [selectedImageData, setSelectedImageData] = React.useState([]);
+  const [duplicateActions, setDuplicateActions] = React.useState(undefined);
 
   if (!(selectedImageData && selectedImageData.length)) {
     return (
@@ -15,14 +16,48 @@ function Importer(props) {
         onGetImageData={setSelectedImageData}
       />
     );
+  } else if (!duplicateActions) {
+    return (
+      <DuplicateIdentifier
+        imageData={selectedImageData}
+        duplicateReviewUrl={props.duplicateReviewUrl}
+        onConfirmDuplicateActions={setDuplicateActions}
+      />
+    );
   } else {
-    return <DuplicateIdentifier />;
+    return <p>Upload time!</p>;
   }
 }
 
 function DuplicateIdentifier(props) {
-  const [potentialDuplicates, setPotentialDuplicates] = React.useState([]);
-  if (potentialDuplicates && potentialDuplicates.length) {
+  const [potentialDuplicates, setPotentialDuplicates] = React.useState({});
+  React.useEffect(() => {
+    const data = JSON.stringify(props.imageData);
+    fetch(props.duplicateReviewUrl, {
+      method: "post",
+      headers: {
+        Accept: "application/json, text/plain, */*",
+        "Content-Type": "application/json",
+      },
+      body: data,
+    })
+      .then((res) => {
+        if (res.ok) {
+          res.json().then((res_json) => {
+            setPotentialDuplicates(res_json);
+            if (Object.keys(res_json).length == 0) {
+              props.onConfirmDuplicateActions({});
+            }
+          });
+        } else {
+          console.error(res);
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }, [props.selectedImageData]);
+  if (potentialDuplicates && Object.keys(potentialDuplicates).length > 0) {
     return <p>Found duplicates</p>;
   } else {
     return <LoadingSpinner message="Identifying duplicates" />;
@@ -112,14 +147,14 @@ function DriveSelector(props) {
         imageData.push(...response.result.files);
       }
       if (images && images.length) {
-        images.forEach(async (element) => {
+        for (let index = 0; index < images.length; index++) {
           let response = await gapi.client.drive.files.get({
-            fileId: element.id,
+            fileId: images[index].id,
             fields:
               "id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata",
           });
           imageData.push(response.result);
-        });
+        }
       }
       props.onGetImageData(imageData);
     }
@@ -155,6 +190,7 @@ ReactDOM.render(
     appId={domContainer.dataset.appId}
     pickerApiKey={domContainer.dataset.pickerApiKey}
     clientId={domContainer.dataset.clientId}
+    duplicateReviewUrl={domContainer.dataset.duplicateReviewUrl}
   />,
   domContainer
 );
