@@ -9,21 +9,35 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('wagtailimages', '0022_uploadedimage'),
-        ('wagtail_image_import', '0001_create_import_permission'),
+        ("wagtailimages", "0022_uploadedimage"),
+        ("wagtail_image_import", "0001_create_import_permission"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='DriveIDMapping',
+            name="DriveIDMapping",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('drive_id', models.CharField(max_length=100)),
-                ('image', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='wagtailimages.Image')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("drive_id", models.CharField(max_length=100)),
+                (
+                    "image",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="wagtailimages.Image",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Drive ID Mapping',
-                'verbose_name_plural': 'Drive ID Mappings',
+                "verbose_name": "Drive ID Mapping",
+                "verbose_name_plural": "Drive ID Mappings",
             },
         ),
     ]
