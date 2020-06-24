@@ -3,14 +3,30 @@ const ReactDOM = window.ReactDOM;
 const Icon = window.wagtail.components.Icon;
 
 function Importer(props) {
-  return (
-    <DriveSelector
-      appId={props.appId}
-      pickerApiKey={props.pickerApiKey}
-      clientId={props.clientId}
-      scope="https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/drive.readonly"
-    />
-  );
+  const [selectedImageData, setSelectedImageData] = React.useState([]);
+
+  if (!(selectedImageData && selectedImageData.length)) {
+    return (
+      <DriveSelector
+        appId={props.appId}
+        pickerApiKey={props.pickerApiKey}
+        clientId={props.clientId}
+        scope="https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/drive.readonly"
+        onGetImageData={setSelectedImageData}
+      />
+    );
+  } else {
+    return <DuplicateIdentifier />;
+  }
+}
+
+function DuplicateIdentifier(props) {
+  const [potentialDuplicates, setPotentialDuplicates] = React.useState([]);
+  if (potentialDuplicates && potentialDuplicates.length) {
+    return <p>Found duplicates</p>;
+  } else {
+    return <LoadingSpinner message="Identifying duplicates" />;
+  }
 }
 
 function DriveSelector(props) {
@@ -75,42 +91,37 @@ function DriveSelector(props) {
     return element.type == google.picker.Type.jG;
   }
 
-  function onSelect(data) {
+  async function onSelect(data) {
     if (data.action == google.picker.Action.PICKED) {
       const images = data.docs.filter(isImage);
       const folders = data.docs.filter(isFolder);
       let imageData = new Array();
-      if (folders) {
+      if (folders && folders.length) {
         const q = `(mimeType contains 'image/') and (${folders
           .reduce(
             (query, folder) => query + `('${folder.id}' in parents) or `,
             ``
           )
           .slice(0, -4)})`;
-        gapi.client.drive.files
-          .list({
-            q: q,
-            pageSize: 1000,
-            fields:
-              "nextPageToken, files(id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata)",
-          })
-          .then((response) => {
-            imageData.push(...response.result.files);
-          });
+        let response = await gapi.client.drive.files.list({
+          q: q,
+          pageSize: 1000,
+          fields:
+            "nextPageToken, files(id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata)",
+        });
+        imageData.push(...response.result.files);
       }
-      if (images) {
-        images.forEach((element) => {
-          gapi.client.drive.files
-            .get({
-              fileId: element.id,
-              fields:
-                "id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata",
-            })
-            .then((response) => {
-              imageData.push(response.result);
-            });
+      if (images && images.length) {
+        images.forEach(async (element) => {
+          let response = await gapi.client.drive.files.get({
+            fileId: element.id,
+            fields:
+              "id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata",
+          });
+          imageData.push(response.result);
         });
       }
+      props.onGetImageData(imageData);
     }
   }
 
