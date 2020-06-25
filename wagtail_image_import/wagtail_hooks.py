@@ -15,8 +15,8 @@ def register_import_permission():
     )
 
 
-@hooks.register('register_admin_urls')
+@hooks.register("register_admin_urls")
 def register_import_urls():
-  return [
-    url(r'^image-import/', include(image_import_urls)),
-  ]
+    return [
+        url(r"^image-import/", include(image_import_urls)),
+    ]
