@@ -31,7 +31,9 @@ function Importer(props) {
 
 function DuplicateIdentifier(props) {
   const [potentialDuplicates, setPotentialDuplicates] = React.useState({});
+  const [duplicateActions, setDuplicateActions] = React.useState({});
   React.useEffect(() => {
+    // query potential duplicates in Wagtail
     const data = JSON.stringify(props.imageData);
     fetch(props.duplicateReviewUrl, {
       method: "post",
@@ -45,7 +47,15 @@ function DuplicateIdentifier(props) {
         if (res.ok) {
           res.json().then((res_json) => {
             setPotentialDuplicates(res_json);
-            if (Object.keys(res_json).length == 0) {
+            let duplicateIds = Object.keys(res_json);
+            // set default actions
+            let actions = {};
+            for (let index = 0; index < duplicateIds.length; index++) {
+              actions[duplicateIds[index]] = "replace";
+            }
+            setDuplicateActions(actions);
+            // if no duplicates, confirm no actions without needing confirmation button click
+            if (duplicateIds.length == 0) {
               props.onConfirmDuplicateActions({});
             }
           });
@@ -57,11 +67,199 @@ function DuplicateIdentifier(props) {
         console.error(error);
       });
   }, [props.selectedImageData]);
+
   if (potentialDuplicates && Object.keys(potentialDuplicates).length > 0) {
-    return <p>Found duplicates</p>;
+    let globalAction = true;
+    getGlobalAction = () => {
+      // if the action chosen for all duplicates is the same, returns the action, otherwise null
+      if (!globalAction) {
+        return null;
+      }
+      return duplicateActions[Object.keys(duplicateActions)[0]];
+    };
+    setGlobalAction = (newAction) => {
+      // sets the action for all duplicates to newAction
+      let newActions = {};
+      const ids = Object.keys(duplicateActions);
+      for (let index = 0; index < ids.length; index++) {
+        newActions[ids[index]] = newAction;
+      }
+      setDuplicateActions(newActions);
+    };
+    let duplicateComparisons = [];
+    let pastAction = null;
+    let action = null;
+    const imageDataIterator = props.imageData.entries();
+    for (const [index, value] of imageDataIterator) {
+      const id = value["id"];
+      if (id in potentialDuplicates) {
+        action = duplicateActions[id];
+        if (globalAction && !(pastAction === null) && !(action == pastAction)) {
+          // if the action is not the same as the previous action, not all actions are the same
+          globalAction = false;
+        }
+        const wagtailDuplicate = potentialDuplicates[id];
+        const driveDuplicate = value;
+        duplicateComparisons.push(
+          <tr>
+            <td>
+              <DuplicateComparison
+                driveDuplicate={driveDuplicate}
+                wagtailDuplicate={wagtailDuplicate}
+              />
+            </td>
+            <DuplicateChoice
+              action={action}
+              onClick={(e) => {
+                let actions = { ...duplicateActions };
+                actions[id] = e.target.value;
+                setDuplicateActions(actions);
+              }}
+            />
+          </tr>
+        );
+        pastAction = action;
+      }
+    }
+    return (
+      <React.Fragment>
+        <div class="nice-padding">
+          <h2 class="icon icon-warning">Duplicates detected</h2>
+          <p>
+            Wagtail has detected images similar to the ones you have just chosen
+            to upload
+          </p>
+          <p>Please choose how you would like to proceed</p>
+          <p>
+            <b>{Object.keys(potentialDuplicates).length} duplicates detected</b>
+          </p>
+          <table class="listing">
+            <thead>
+              <tr class="table-headers">
+                <th></th>
+                <th>Replace original image</th>
+                <th>Keep both images</th>
+                <th>Cancel upload</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td></td>
+                <DuplicateChoice
+                  action={getGlobalAction()}
+                  onClick={(e) => {
+                    setGlobalAction(e.target.value);
+                  }}
+                />
+              </tr>
+              {duplicateComparisons}
+            </tbody>
+          </table>
+        </div>
+        <footer>
+          <ul>
+            <li class="actions">
+              <button
+                type="submit"
+                class="button"
+                onClick={() =>
+                  props.onConfirmDuplicateActions(duplicateActions)
+                }
+              >
+                Confirm all
+              </button>
+            </li>
+          </ul>
+        </footer>
+      </React.Fragment>
+    );
   } else {
-    return <LoadingSpinner message="Identifying duplicates" />;
+    return (
+      <div class="nice-padding">
+        <LoadingSpinner message="Identifying duplicates" />
+      </div>
+    );
   }
+}
+
+function DuplicateChoice(props) {
+  return (
+    <React.Fragment>
+      <td>
+        <input
+          type="radio"
+          value="replace"
+          checked={props.action == "replace"}
+          onClick={props.onClick}
+        ></input>
+      </td>
+      <td>
+        <input
+          type="radio"
+          value="keep"
+          checked={props.action == "keep"}
+          onClick={props.onClick}
+        ></input>
+      </td>
+      <td>
+        <input
+          type="radio"
+          value="cancel"
+          checked={props.action == "cancel"}
+          onClick={props.onClick}
+        ></input>
+      </td>
+    </React.Fragment>
+  );
+}
+
+function DuplicateComparison(props) {
+  return (
+    <table class="image-comparison">
+      <thead>
+        <tr class="image-headings">
+          <th>Original</th>
+          <th>New</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <img
+              src={props.wagtailDuplicate["thumbnail"]}
+              width="165"
+              height="165"
+            />
+          </td>
+          <td>
+            <img
+              src={props.driveDuplicate["thumbnailLink"]}
+              width="165"
+              height="165"
+            />
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <p>
+              <b>{props.wagtailDuplicate["title"]}</b>
+            </p>
+          </td>
+          <td>
+            <p>
+              <b>{props.driveDuplicate["name"]}</b>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <p>Created at {props.wagtailDuplicate["created_at"]}</p>
+          </td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  );
 }
 
 function DriveSelector(props) {
@@ -168,12 +366,18 @@ function DriveSelector(props) {
 
   if (apiLoaded) {
     return (
-      <button class="button bicolor icon icon-plus" onClick={pick}>
-        Select an image or folder in Drive
-      </button>
+      <div class="nice-padding">
+        <button class="button bicolor icon icon-plus" onClick={pick}>
+          Select an image or folder in Drive
+        </button>
+      </div>
     );
   } else {
-    return <LoadingSpinner message="Loading Google API" />;
+    return (
+      <div class="nice-padding">
+        <LoadingSpinner message="Loading Google API" />
+      </div>
+    );
   }
 }
 

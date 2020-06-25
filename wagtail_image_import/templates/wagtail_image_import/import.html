@@ -10,13 +10,14 @@
     {{ form_media.css }}
 
     <link rel="stylesheet" href="{% versioned_static 'wagtailimages/css/add-multiple.css' %}" type="text/css" />
+    <link rel="stylesheet" href="{% static 'wagtail_image_import/css/import.css' %}" type="text/css" />
 {% endblock %}
 
 {% block content %}
     {% trans "Import from Drive" as add_str %}
     {% include "wagtailadmin/shared/header.html" with title=add_str icon="image" %}
 
-    <div class="nice-padding" id="importer" data-app-id="{{ app_id }}" data-picker-api-key="{{ picker_api_key }}" data-client-id="{{ client_id }}" data-duplicate-review-url="{% url 'wagtail_image_import:find_duplicates' %}">
+    <div id="importer" data-app-id="{{ app_id }}" data-picker-api-key="{{ picker_api_key }}" data-client-id="{{ client_id }}" data-duplicate-review-url="{% url 'wagtail_image_import:find_duplicates' %}">
 
     </div>
 {% endblock %}

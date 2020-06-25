@@ -41,7 +41,7 @@ def find_duplicates(request):
         duplicate_data = {
             'pk': duplicate.pk,
             'title': duplicate.title,
-            'created_at': duplicate.created_at,
+            'created_at': duplicate.created_at.strftime(getattr(settings, 'WAGTAIL_DATETIME_FORMAT', '%d.%m.%Y. %H:%M')),
             'thumbnail': duplicate.get_rendition('max-165x165').url
         }
         duplicates[image_data['id']] = duplicate_data
