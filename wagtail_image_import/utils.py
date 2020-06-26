@@ -6,6 +6,8 @@ from wagtail.images import get_image_model
 def get_most_likely_duplicate(drive_image_info, field_mapping, field_weighting):
     filters = {}
     or_filter = Q()
+    drive_image_info = flatten(drive_image_info)
+
     for drive_field, db_field in field_mapping.items():
         field_filter = Q(**{db_field: drive_image_info[drive_field]})
         filters[db_field] = field_filter
@@ -26,3 +28,14 @@ def get_most_likely_duplicate(drive_image_info, field_mapping, field_weighting):
     # order by the number of matching fields
 
     return qs.first()
+
+
+def flatten(d, parent_key="", sep="__"):
+    items = []
+    for k, v in d.items():
+        new_key = parent_key + sep + k if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)

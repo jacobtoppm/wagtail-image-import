@@ -34,8 +34,13 @@ def find_duplicates(request):
         {"id": "driveidmapping__drive_id", "name": "title",},
     )
     # maps drive fields to db fields
+    # if using DuplicateFindingMixin, you can also add imageMediaMetadata__time: exif_datetime, and md5Checksum: md5_hash
 
-    field_weighting = getattr(settings, "WAGTAILIMAGEIMPORT_FIELD_WEIGHTING", {})
+    field_weighting = getattr(
+        settings,
+        "WAGTAILIMAGEIMPORT_FIELD_WEIGHTING",
+        {"driveidmapping__drive_id": 10, "md5Checksum": 5, "title": 2},
+    )
     # maps db fields to their weighting when finding most likely duplicate - default weighting is 1
 
     duplicates = {}
