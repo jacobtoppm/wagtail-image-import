@@ -5,7 +5,9 @@ from wagtail.images import get_image_model_string
 def create_import_permission(apps, schema_editor):
     label, model_name = get_image_model_string().lower().split(".")
     ContentType = apps.get_model("contenttypes", "ContentType")
-    image_content_type = ContentType.objects.get(app_label=label, model=model_name)
+    image_content_type = ContentType.objects.get_for_model(
+        apps.get_model(label, model_name)
+    )
     Permission = apps.get_model("auth", "Permission")
     Permission.objects.get_or_create(
         codename="import_image",
@@ -17,7 +19,9 @@ def create_import_permission(apps, schema_editor):
 def delete_import_permission(apps, schema_editor):
     label, model_name = get_image_model_string().lower().split(".")
     ContentType = apps.get_model("contenttypes", "ContentType")
-    image_content_type = ContentType.objects.get(app_label=label, model=model_name)
+    image_content_type = ContentType.objects.get_for_model(
+        apps.get_model(label, model_name)
+    )
     Permission = apps.get_model("auth", "Permission")
     permission = Permission.objects.filter(
         codename="can_import",
