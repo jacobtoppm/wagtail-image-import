@@ -5,6 +5,27 @@ const Icon = window.wagtail.components.Icon;
 function Importer(props) {
   const [selectedImageData, setSelectedImageData] = React.useState([]);
   const [duplicateActions, setDuplicateActions] = React.useState(undefined);
+  const [duplicateData, setDuplicateData] = React.useState(undefined);
+
+  function getImageImports() {
+    return selectedImageData
+      .map((data) => {
+        const id = data["id"];
+        const duplicateAction = duplicateActions[id];
+        return (imageImport = {
+          drive_id: id,
+          name: data["name"],
+          progress: 0,
+          action: duplicateActions[id] || "keep",
+          thumbnail: data["thumbnailLink"],
+          wagtail_id:
+            duplicateActions[id] == "replace"
+              ? duplicateData[id]["wagtail_id"]
+              : null,
+        });
+      })
+      .filter((imageImport) => !(imageImport["action"] == "cancel"));
+  }
 
   if (!(selectedImageData && selectedImageData.length)) {
     return (
@@ -22,11 +43,242 @@ function Importer(props) {
         imageData={selectedImageData}
         duplicateReviewUrl={props.duplicateReviewUrl}
         onConfirmDuplicateActions={setDuplicateActions}
+        onGetDuplicateData={setDuplicateData}
       />
     );
   } else {
-    return <p>Upload time!</p>;
+    return (
+      <FileImporter
+        imageImports={getImageImports()}
+        csrfToken={props.csrfToken}
+      />
+    );
   }
+}
+
+function FileImporter(props) {
+  const [currentlyImporting, setCurrentlyImporting] = React.useState(false);
+  const [imageImports, setImageImports] = React.useState(props.imageImports);
+  const oauthToken = gapi.auth2
+    .getAuthInstance()
+    .currentUser.get()
+    .getAuthResponse().access_token;
+
+  function setImageParam(paramName, paramValue, index) {
+    let newImageImports = [...imageImports];
+    newImageImports[index][paramName] = paramValue;
+    setImageImports(newImageImports);
+  }
+
+  function startImport(newImport, index) {
+    setCurrentlyImporting(true);
+    var imageRequest = new XMLHttpRequest();
+    imageRequest.addEventListener("load", (e) => {
+      setImageParam("progress", 50, index);
+      uploadToWagtail(
+        new File([imageRequest.response], newImport["name"]),
+        newImport,
+        index
+      );
+    });
+    imageRequest.addEventListener("error", () => {
+      setImageParam("progress", 0, index);
+      setCurrentlyImporting(false);
+      setImageParam("error", "Failed to import from Google", index);
+    });
+    imageRequest.addEventListener("progress", (e) => {
+      if (e.lengthComputable) {
+        setImageParam(
+          "progress",
+          Math.floor((100 * e.loaded) / (2 * e.total)),
+          index
+        );
+      }
+    });
+    imageRequest.open(
+      "GET",
+      "https://www.googleapis.com/drive/v3/files/" +
+        newImport["drive_id"] +
+        "?alt=media"
+    );
+    imageRequest.responseType = "blob";
+    imageRequest.setRequestHeader("Authorization", "Bearer " + oauthToken);
+    imageRequest.send();
+  }
+
+  function uploadToWagtail(imageFile, newImport, index) {
+    let formData = new FormData();
+    formData.append("drive_id", newImport["drive_id"]);
+    formData.append("wagtail_id", newImport["wagtail_id"]);
+    formData.append("action", newImport["action"]);
+    formData.append("name", newImport["name"]);
+    formData.append("collection", 1);
+    formData.append("image_file", imageFile);
+    var request = new XMLHttpRequest();
+    request.addEventListener("load", async (e) => {
+      setCurrentlyImporting(false);
+      let res = await request.response;
+      res = JSON.parse(res);
+      if (res["error"]) {
+        setImageParam("error", res["error"], index);
+      }
+      setImageParam("imported", true, index);
+      setImageParam("form", res["form"], index);
+      setImageParam("edit_action", res["edit_action"], index);
+      setImageParam("delete_action", res["delete_action"], index);
+      setImageParam("progress", 100, index);
+    });
+    request.addEventListener("error", async (e) => {
+      setCurrentlyImporting(false);
+      setImageParam("error", "Failed to upload to Wagtail", index);
+    });
+    request.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable) {
+        setImageParam(
+          "progress",
+          Math.floor(50 + (100 * e.loaded) / (2 * e.total)),
+          index
+        );
+      }
+    });
+    request.open("POST", window.location);
+    request.setRequestHeader("X-CSRFToken", props.csrfToken);
+    request.setRequestHeader("HTTP_X_REQUESTED_WITH", "XMLHttpRequest");
+    request.send(formData);
+  }
+
+  React.useEffect(() => {
+    // start import if not currently importing
+    if (!currentlyImporting) {
+      const nextImportIndex = imageImports.findIndex(
+        (imageImport) => !imageImport["error"] && !imageImport["imported"]
+      );
+      const nextImport = imageImports[nextImportIndex];
+      if (nextImport) {
+        startImport(nextImport, nextImportIndex);
+      }
+    }
+  }, [currentlyImporting]);
+
+  function getDisplay(imageImport, index) {
+    return (
+      <ImageImportDisplay
+        progress={imageImport["progress"]}
+        thumbnail={imageImport["thumbnail"]}
+        name={imageImport["name"]}
+        form={imageImport["form"]}
+        error={imageImport["error"]}
+        onFormResponseError={(res) => {
+          setImageParam("error", res["error"], index);
+          setImageParam("form", res["form"], index);
+          setImageParam("edit_action", res["edit_action"], index);
+          setImageParam("delete_action", res["delete_action"], index);
+        }}
+        onFormResponseSuccess={(res) => {
+          setImageParam("finished", true, index);
+          setImageParam("error", res["error"], index);
+          setImageParam("form", res["form"], index);
+          setImageParam("edit_action", res["edit_action"], index);
+          setImageParam("delete_action", res["delete_action"], index);
+        }}
+        onDeleteResponseLoad={(res) => {
+          setImageParam("finished", true, index);
+          setImageParam("error", res["error"], index);
+          setImageParam("form", res["form"], index);
+          setImageParam("edit_action", res["edit_action"], index);
+          setImageParam("delete_action", res["delete_action"], index);
+        }}
+        driveId={imageImport["drive_id"]}
+        editAction={imageImport["edit_action"]}
+        deleteAction={imageImport["delete_action"]}
+        csrfToken={props.csrfToken}
+      />
+    );
+  }
+
+  return (
+    <ul id="upload-list" class="upload-list multiple">
+      {imageImports
+        .filter((imageImport) => !imageImport["finished"])
+        .map(getDisplay)}
+    </ul>
+  );
+}
+
+function ImageImportDisplay(props) {
+  return (
+    <li class="row upload-uploading">
+      <div class="left col3">
+        <div class="preview">
+          <div class="thumb icon icon-image hasthumb">
+            <img src={props.thumbnail} />
+          </div>
+          <div class="progress active">
+            <div class="bar" style={{ width: props.progress + "%" }}>
+              {props.progress}%
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="right col9">
+        <p>{props.name}</p>
+        {props.error}
+        <form
+          method="POST"
+          enctype="multipart/form-data"
+          novalidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            var request = new XMLHttpRequest();
+            request.addEventListener("load", async (e) => {
+              e.preventDefault();
+              res = await request.response;
+              res = JSON.parse(res);
+              if (res["error"]) {
+                props.onFormResponseError(res);
+              } else {
+                props.onFormResponseSuccess(res);
+              }
+            });
+            request.open("POST", props.editAction);
+            request.setRequestHeader("X-CSRFToken", props.csrfToken);
+            request.setRequestHeader("HTTP_X_REQUESTED_WITH", "XMLHttpRequest");
+            request.send(new FormData(e.target));
+          }}
+        >
+          <ul class="fields">
+            <div dangerouslySetInnerHTML={{ __html: props.form }} />
+            <li>
+              <input type="hidden" name="drive_id" value={props.driveId} />
+              <input type="submit" value="Update" class="button" />
+              <button
+                class="delete button button-secondary no"
+                onClick={(e) => {
+                  e.preventDefault();
+                  var request = new XMLHttpRequest();
+                  request.addEventListener("load", async (e) => {
+                    e.preventDefault();
+                    res = await request.response;
+                    res = JSON.parse(res);
+                    props.onDeleteResponseLoad(res);
+                  });
+                  request.open("POST", props.editAction);
+                  request.setRequestHeader("X-CSRFToken", props.csrfToken);
+                  request.setRequestHeader(
+                    "HTTP_X_REQUESTED_WITH",
+                    "XMLHttpRequest"
+                  );
+                  request.send();
+                }}
+              >
+                "Delete"
+              </button>
+            </li>
+          </ul>
+        </form>
+      </div>
+    </li>
+  );
 }
 
 function DuplicateIdentifier(props) {
@@ -47,6 +299,7 @@ function DuplicateIdentifier(props) {
         if (res.ok) {
           res.json().then((res_json) => {
             setPotentialDuplicates(res_json);
+            props.onGetDuplicateData(res_json);
             let duplicateIds = Object.keys(res_json);
             // set default actions
             let actions = {};
@@ -340,7 +593,7 @@ function DriveSelector(props) {
           q: q,
           pageSize: 1000,
           fields:
-            "nextPageToken, files(id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata)",
+            "nextPageToken, files(id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata, webContentLink)",
         });
         imageData.push(...response.result.files);
       }
@@ -349,7 +602,7 @@ function DriveSelector(props) {
           let response = await gapi.client.drive.files.get({
             fileId: images[index].id,
             fields:
-              "id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata",
+              "id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata, webContentLink",
           });
           imageData.push(response.result);
         }
@@ -395,6 +648,7 @@ ReactDOM.render(
     pickerApiKey={domContainer.dataset.pickerApiKey}
     clientId={domContainer.dataset.clientId}
     duplicateReviewUrl={domContainer.dataset.duplicateReviewUrl}
+    csrfToken={document.querySelector("[name=csrfmiddlewaretoken]").value}
   />,
   domContainer
 );
