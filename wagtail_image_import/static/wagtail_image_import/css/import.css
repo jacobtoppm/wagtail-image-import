@@ -28,7 +28,9 @@
 }
 
 .import-selector {
-    padding-bottom: 50px;
+    padding-top: 50px;
     text-align: center;
-    max-width: 1500px;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
 }
