@@ -80,11 +80,11 @@ class TestDuplicateFinding(TestCase):
     def test_find_exif_datetime_duplicates(self):
         time_config = ({"imageMediaMetadata__time": "exif_datetime"}, {})
         duplicate = get_most_likely_duplicate(
-            {"DateTime": "2008:07:31 10:38:11"}, *time_config
+            {"imageMediaMetadata": {"time": "2008:07:31 10:38:11"}}, *time_config
         )
         self.assertEqual(duplicate, self.canon_image)
         duplicate_2 = get_most_likely_duplicate(
-            {"DateTime": "2008:07:31 10:38:14"}, *time_config
+            {"imageMediaMetadata": {"time": "2008:07:31 10:38:14"}}, *time_config
         )
         self.assertEqual(duplicate_2, None)
 
