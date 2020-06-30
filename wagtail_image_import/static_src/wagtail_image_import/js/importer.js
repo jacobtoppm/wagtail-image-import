@@ -122,7 +122,7 @@ function FileImporter(props) {
       if (e.lengthComputable) {
         setImageParam(
           "progress",
-          Math.floor((100 * e.loaded) / (2 * e.total)),
+          Math.round((100 * e.loaded) / (2 * e.total)),
           index
         );
       }
@@ -168,7 +168,7 @@ function FileImporter(props) {
       if (e.lengthComputable) {
         setImageParam(
           "progress",
-          Math.floor(50 + (100 * e.loaded) / (2 * e.total)),
+          Math.round(50 + (100 * e.loaded) / (2 * e.total)),
           index
         );
       }
@@ -229,12 +229,23 @@ function FileImporter(props) {
     );
   }
 
+  const overallProgress = imageImports.reduce((total, imageImport) => {
+    return total + (imageImport.progress)/imageImports.length
+  }, 0);
+
   return (
+    <div class="nice-padding">
+      <h2>Image import</h2>
+      <div id="overall-progress" aria-valuenow={Math.round(overallProgress)} class="progress progress-secondary active">
+        <div class="bar" style={{ width: overallProgress + "%" }}>{Math.round(overallProgress)+"%"}</div>
+      </div>
+      {if }
     <ul id="upload-list" class="upload-list multiple">
       {imageImports
         .filter((imageImport) => !imageImport["finished"])
         .map(getDisplay)}
     </ul>
+    </div>
   );
 }
 

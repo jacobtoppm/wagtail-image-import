@@ -17,3 +17,9 @@
     border-bottom: none;
     border-top: none;
 }
+
+
+.progress .bar {
+    white-space: nowrap;
+    overflow: visible;
+}
