@@ -70,7 +70,7 @@ function Importer(props) {
 
 function CollectionSelector(props) {
   return (
-    <div class="field nice-padding">
+    <div class="field nice-padding import-selector">
       <label for="id_addimage_collection">Add to collection:</label>
       <div class="field-content">
         <select
@@ -148,13 +148,11 @@ function FileImporter(props) {
     formData.append("image_file", imageFile);
     var request = new XMLHttpRequest();
     request.addEventListener("load", async (e) => {
-      setCurrentlyImporting(false);
       let res = await request.response;
       res = JSON.parse(res);
-      if (res["error"]) {
-        setImageParam("error", res["error"], index);
-      }
       setImageParam("imported", true, index);
+      setCurrentlyImporting(false);
+      setImageParam("error", res["error"], index);
       setImageParam("form", res["form"], index);
       setImageParam("edit_action", res["edit_action"], index);
       setImageParam("delete_action", res["delete_action"], index);
@@ -195,12 +193,7 @@ function FileImporter(props) {
   function getDisplay(imageImport, index) {
     return (
       <ImageImportDisplay
-        progress={imageImport["progress"]}
-        thumbnail={imageImport["thumbnail"]}
-        name={imageImport["name"]}
-        form={imageImport["form"]}
-        error={imageImport["error"]}
-        imported={imageImport["imported"]}
+        imageImport={imageImport}
         onFormResponseError={(res) => {
           setImageParam("error", res["error"], index);
           setImageParam("form", res["form"], index);
@@ -221,9 +214,6 @@ function FileImporter(props) {
           setImageParam("edit_action", res["edit_action"], index);
           setImageParam("delete_action", res["delete_action"], index);
         }}
-        driveId={imageImport["drive_id"]}
-        editAction={imageImport["edit_action"]}
-        deleteAction={imageImport["delete_action"]}
         csrfToken={props.csrfToken}
         tagitOpts={props.tagitOpts}
       />
@@ -231,25 +221,79 @@ function FileImporter(props) {
   }
 
   const overallProgress = imageImports.reduce((total, imageImport) => {
-    return total + (imageImport.progress)/imageImports.length
+    return total + imageImport.progress / imageImports.length;
   }, 0);
 
   return (
     <div class="nice-padding">
       <h2>Image import</h2>
-      <div id="overall-progress" aria-valuenow={Math.round(overallProgress)} class="progress progress-secondary active">
-        <div class="bar" style={{ width: overallProgress + "%" }}>{Math.round(overallProgress)+"%"}</div>
+      <div
+        id="overall-progress"
+        aria-valuenow={Math.round(overallProgress)}
+        class="progress progress-secondary active"
+      >
+        <div class="bar" style={{ width: overallProgress + "%" }}>
+          {Math.round(overallProgress) + "%"}
+        </div>
       </div>
-    <ul id="upload-list" class="upload-list multiple">
-      {imageImports
-        .filter((imageImport) => !imageImport["finished"])
-        .map(getDisplay)}
-    </ul>
+      <ul id="upload-list" class="upload-list multiple">
+        {imageImports
+          .filter((imageImport) => !imageImport["finished"])
+          .map(getDisplay)}
+      </ul>
     </div>
   );
 }
 
 function ImageImportDisplay(props) {
+  return (
+    <li class="row upload-uploading">
+      <div class="left col3">
+        <div class="preview">
+          <div class="thumb icon icon-image hasthumb">
+            <img src={props.imageImport.thumbnail} />
+          </div>
+          {props.imageImport.imported ? null : (
+            <div class="progress active">
+              <div
+                class="bar"
+                style={{ width: props.imageImport.progress + "%" }}
+              >
+                {props.imageImport.progress}%
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      <div class="right col9">
+        <p>{props.imageImport.name}</p>
+        <p
+          class={
+            props.imageImport.error
+              ? "status-msg failure"
+              : "status-msg success"
+          }
+        >
+          {props.imageImport.error || !props.imageImport.imported
+            ? props.imageImport.error
+            : "Image successfully imported. Please update this image with a more appropriate title, if necessary. You may also delete the image completely if the import wasn't required."}
+        </p>
+        {props.imageImport.form ? (
+          <ImportUpdateForm
+            imageImport={props.imageImport}
+            onFormResponseError={props.onFormResponseError}
+            onFormResponseSuccess={props.onFormResponseSuccess}
+            onDeleteResponseLoad={props.onDeleteResponseLoad}
+            csrfToken={props.csrfToken}
+            tagitOpts={props.tagitOpts}
+          />
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+function ImportUpdateForm(props) {
   const updateForm = React.useRef(null);
 
   React.useLayoutEffect(() => {
@@ -263,77 +307,66 @@ function ImageImportDisplay(props) {
         };
       }
     }
-  }, [props.form]);
+  }, [props.imageImport.form]);
 
+  function submitForm(e) {
+    e.preventDefault();
+    var request = new XMLHttpRequest();
+    request.addEventListener("load", async (e) => {
+      e.preventDefault();
+      res = await request.response;
+      res = JSON.parse(res);
+      if (res["error"]) {
+        props.onFormResponseError(res);
+      } else {
+        props.onFormResponseSuccess(res);
+      }
+    });
+    request.open("POST", props.imageImport.edit_action);
+    request.setRequestHeader("X-CSRFToken", props.csrfToken);
+    request.setRequestHeader("HTTP_X_REQUESTED_WITH", "XMLHttpRequest");
+    request.send(new FormData(e.target));
+  }
+  function deleteImage(e) {
+    e.preventDefault();
+    var request = new XMLHttpRequest();
+    request.addEventListener("load", async (e) => {
+      e.preventDefault();
+      res = await request.response;
+      res = JSON.parse(res);
+      props.onDeleteResponseLoad(res);
+    });
+    request.open("POST", props.imageImport.edit_action);
+    request.setRequestHeader("X-CSRFToken", props.csrfToken);
+    request.setRequestHeader("HTTP_X_REQUESTED_WITH", "XMLHttpRequest");
+    request.send();
+  }
   return (
-    <li class="row upload-uploading">
-      <div class="left col3">
-        <div class="preview">
-          <div class="thumb icon icon-image hasthumb">
-            <img src={props.thumbnail} />
-          </div>
-          {(props.imported) ? null : <div class="progress active"><div class="bar" style={{ width: props.progress + "%" }}>{props.progress}%</div></div>}
-        </div>
-      </div>
-      <div class="right col9">
-        <p>{props.name}</p>
-        <p class={(props.error) ? "status-msg failure" : "status-msg success"}>{(props.error || !props.imported) ? props.error : "Image successfully imported. Please update this image with a more appropriate title, if necessary. You may also delete the image completely if the import wasn't required."}</p>
-        <form
-          method="POST"
-          enctype="multipart/form-data"
-          novalidate
-          ref={updateForm}
-          onSubmit={(e) => {
-            e.preventDefault();
-            var request = new XMLHttpRequest();
-            request.addEventListener("load", async (e) => {
-              e.preventDefault();
-              res = await request.response;
-              res = JSON.parse(res);
-              if (res["error"]) {
-                props.onFormResponseError(res);
-              } else {
-                props.onFormResponseSuccess(res);
-              }
-            });
-            request.open("POST", props.editAction);
-            request.setRequestHeader("X-CSRFToken", props.csrfToken);
-            request.setRequestHeader("HTTP_X_REQUESTED_WITH", "XMLHttpRequest");
-            request.send(new FormData(e.target));
-          }}
-        >
-          <ul class="fields">
-            <div dangerouslySetInnerHTML={{ __html: props.form }} />
-            <li>
-              <input type="hidden" name="drive_id" value={props.driveId} />
-              <input type="submit" value="Update" class="button" />
-              <button
-                class="delete button button-secondary no"
-                onClick={(e) => {
-                  e.preventDefault();
-                  var request = new XMLHttpRequest();
-                  request.addEventListener("load", async (e) => {
-                    e.preventDefault();
-                    res = await request.response;
-                    res = JSON.parse(res);
-                    props.onDeleteResponseLoad(res);
-                  });
-                  request.open("POST", props.editAction);
-                  request.setRequestHeader("X-CSRFToken", props.csrfToken);
-                  request.setRequestHeader(
-                    "HTTP_X_REQUESTED_WITH",
-                    "XMLHttpRequest"
-                  );
-                  request.send();
-                }}
-              >
-                Delete
-              </button>
-            </li>
-          </ul>
-        </form>
-      </div>
-    </li>
+    <form
+      method="POST"
+      enctype="multipart/form-data"
+      novalidate
+      ref={updateForm}
+      onSubmit={submitForm}
+    >
+      <ul class="fields">
+        <div dangerouslySetInnerHTML={{ __html: props.imageImport.form }} />
+        <li>
+          <input
+            type="hidden"
+            name="drive_id"
+            value={props.imageImport.driveId}
+          />
+          <input type="submit" value="Update" class="button" />
+          <button
+            class="delete button button-secondary no"
+            onClick={deleteImage}
+          >
+            Delete
+          </button>
+        </li>
+      </ul>
+    </form>
   );
 }
 
@@ -675,7 +708,7 @@ function DriveSelector(props) {
 
   if (apiLoaded) {
     return (
-      <div class="nice-padding">
+      <div class="nice-padding import-selector">
         <button class="button bicolor icon icon-plus" onClick={pick}>
           Select an image or folder in Drive
         </button>
@@ -683,7 +716,7 @@ function DriveSelector(props) {
     );
   } else {
     return (
-      <div class="nice-padding">
+      <div class="nice-padding import-selector">
         <LoadingSpinner message="Loading Google API" />
       </div>
     );
