@@ -125,7 +125,8 @@ def import_from_drive(request):
 
             return JsonResponse(
                 {
-                    "error": "\n".join(
+                    "error": "The image was uploaded, but needs additional input to be saved. Errors: "
+                    + "\n".join(
                         [
                             field + ": " + error
                             for field, error_list in form.errors.items()

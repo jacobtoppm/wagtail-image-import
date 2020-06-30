@@ -114,3 +114,5 @@ WAGTAIL_SITE_NAME = "wagtail-image-import"
 BASE_URL = "http://example.com"
 
 WAGTAILIMAGES_IMAGE_MODEL = "tests.CustomImage"
+WAGTAILIMAGEIMPORT_GOOGLE_PICKER_API_KEY = "test"
+WAGTAILIMAGEIMPORT_GOOGLE_OAUTH_CLIENT_SECRET = '{"web":{"client_id":"","project_id":"","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"","javascript_origins":[""]}}'
