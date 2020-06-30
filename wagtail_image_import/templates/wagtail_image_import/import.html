@@ -18,7 +18,8 @@
     {% include "wagtailadmin/shared/header.html" with title=add_str icon="image" %}
 
     {% csrf_token %}
-    <div id="importer" data-app-id="{{ app_id }}" data-picker-api-key="{{ picker_api_key }}" data-client-id="{{ client_id }}" data-duplicate-review-url="{% url 'wagtail_image_import:find_duplicates' %}">
+    {% url 'wagtailadmin_tag_autocomplete' as autocomplete_url %}
+    <div id="importer" data-app-id="{{ app_id }}" data-picker-api-key="{{ picker_api_key }}" data-client-id="{{ client_id }}" data-duplicate-review-url="{% url 'wagtail_image_import:find_duplicates' %}" data-collections="{{ collections }}" data-autocomplete-url="{{ autocomplete_url|addslashes }}">
 
     </div>
 {% endblock %}

@@ -31,11 +31,12 @@ def import_from_drive(request):
     collections = permission_policy.collections_user_has_permission_for(
         request.user, "add"
     )
-    if len(collections) > 1:
-        collections_to_choose = Collection.order_for_display(collections)
-    else:
-        # no need to show a collections chooser
-        collections_to_choose = None
+    collections_to_choose = json.dumps(
+        [
+            (collection.id, collection.name)
+            for collection in Collection.order_for_display(collections)
+        ]
+    )
     Image = get_image_model()
     ImageForm = get_image_form(Image)
 
@@ -159,6 +160,7 @@ def import_from_drive(request):
         "app_id": client_secret["web"]["project_id"],
         "client_id": client_secret["web"]["client_id"],
         "picker_api_key": settings.WAGTAILIMAGEIMPORT_GOOGLE_PICKER_API_KEY,
+        "collections": collections_to_choose,
     }
     return render(request, "wagtail_image_import/import.html", context=context)
 

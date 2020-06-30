@@ -6,6 +6,7 @@ function Importer(props) {
   const [selectedImageData, setSelectedImageData] = React.useState([]);
   const [duplicateActions, setDuplicateActions] = React.useState(undefined);
   const [duplicateData, setDuplicateData] = React.useState(undefined);
+  const [collection, setCollection] = React.useState(props.collections[0][0]);
 
   function getImageImports() {
     return selectedImageData
@@ -29,13 +30,22 @@ function Importer(props) {
 
   if (!(selectedImageData && selectedImageData.length)) {
     return (
-      <DriveSelector
-        appId={props.appId}
-        pickerApiKey={props.pickerApiKey}
-        clientId={props.clientId}
-        scope="https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/drive.readonly"
-        onGetImageData={setSelectedImageData}
-      />
+      <React.Fragment>
+        <DriveSelector
+          appId={props.appId}
+          pickerApiKey={props.pickerApiKey}
+          clientId={props.clientId}
+          scope="https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/drive.readonly"
+          onGetImageData={setSelectedImageData}
+        />
+        <CollectionSelector
+          collections={props.collections}
+          selected={collection}
+          onChange={(e) => {
+            setCollection(e.target.value);
+          }}
+        />
+      </React.Fragment>
     );
   } else if (!duplicateActions) {
     return (
@@ -51,9 +61,31 @@ function Importer(props) {
       <FileImporter
         imageImports={getImageImports()}
         csrfToken={props.csrfToken}
+        collection={collection}
+        tagitOpts={props.tagitOpts}
       />
     );
   }
+}
+
+function CollectionSelector(props) {
+  return (
+    <div class="field nice-padding">
+      <label for="id_addimage_collection">Add to collection:</label>
+      <div class="field-content">
+        <select
+          id="id_addimage_collection"
+          name="collection"
+          value={props.selected}
+          onChange={props.onChange}
+        >
+          {props.collections.map((collection) => {
+            return <option value={collection[0]}>{collection[1]}</option>;
+          })}
+        </select>
+      </div>
+    </div>
+  );
 }
 
 function FileImporter(props) {
@@ -112,7 +144,7 @@ function FileImporter(props) {
     formData.append("wagtail_id", newImport["wagtail_id"]);
     formData.append("action", newImport["action"]);
     formData.append("name", newImport["name"]);
-    formData.append("collection", 1);
+    formData.append("collection", props.collection);
     formData.append("image_file", imageFile);
     var request = new XMLHttpRequest();
     request.addEventListener("load", async (e) => {
@@ -192,6 +224,7 @@ function FileImporter(props) {
         editAction={imageImport["edit_action"]}
         deleteAction={imageImport["delete_action"]}
         csrfToken={props.csrfToken}
+        tagitOpts={props.tagitOpts}
       />
     );
   }
@@ -206,6 +239,21 @@ function FileImporter(props) {
 }
 
 function ImageImportDisplay(props) {
+  const updateForm = React.useRef(null);
+
+  React.useLayoutEffect(() => {
+    // initialise tag fields
+    if (updateForm.current) {
+      const field = $(".tag_field input", updateForm.current);
+      if (field) {
+        field.tagit(props.tagitOpts);
+        return () => {
+          field.tagit("destroy");
+        };
+      }
+    }
+  }, [props.form]);
+
   return (
     <li class="row upload-uploading">
       <div class="left col3">
@@ -227,6 +275,7 @@ function ImageImportDisplay(props) {
           method="POST"
           enctype="multipart/form-data"
           novalidate
+          ref={updateForm}
           onSubmit={(e) => {
             e.preventDefault();
             var request = new XMLHttpRequest();
@@ -271,7 +320,7 @@ function ImageImportDisplay(props) {
                   request.send();
                 }}
               >
-                "Delete"
+                Delete
               </button>
             </li>
           </ul>
@@ -649,6 +698,10 @@ ReactDOM.render(
     clientId={domContainer.dataset.clientId}
     duplicateReviewUrl={domContainer.dataset.duplicateReviewUrl}
     csrfToken={document.querySelector("[name=csrfmiddlewaretoken]").value}
+    collections={JSON.parse(domContainer.dataset.collections)}
+    tagitOpts={{
+      autocomplete: { source: domContainer.dataset.autocompleteUrl },
+    }}
   />,
   domContainer
 );
