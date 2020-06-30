@@ -37,6 +37,7 @@ function Importer(props) {
           clientId={props.clientId}
           scope="https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/drive.readonly"
           onGetImageData={setSelectedImageData}
+          driveParent={props.driveParent || "root"}
         />
         <CollectionSelector
           collections={props.collections}
@@ -644,7 +645,7 @@ function DriveSelector(props) {
     let docsView = new google.picker.DocsView(google.picker.ViewId.DOCS_IMAGES);
     docsView.setSelectFolderEnabled(true);
     docsView.setIncludeFolders(true);
-    docsView.setParent("root");
+    docsView.setParent(props.driveParent);
 
     let picker = new google.picker.PickerBuilder()
       .setAppId(props.appId)
@@ -742,6 +743,7 @@ ReactDOM.render(
     tagitOpts={{
       autocomplete: { source: domContainer.dataset.autocompleteUrl },
     }}
+    driveParent={domContainer.dataset.driveParent}
   />,
   domContainer
 );

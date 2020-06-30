@@ -8,6 +8,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
 from django.urls import reverse
+from django.utils.module_loading import import_string
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
@@ -155,12 +156,21 @@ def import_from_drive(request):
                     ),
                 }
             )
+    # manually set the Google picker parent folder if a function is provided
+    drive_parent_finder = getattr(
+        settings, "WAGTAILIMAGEIMPORT_SET_DRIVE_PARENT_FUNCTION", ""
+    )
+    drive_parent = (
+        import_string(drive_parent_finder)(request) if drive_parent_finder else "root"
+    )
+
     client_secret = json.loads(settings.WAGTAILIMAGEIMPORT_GOOGLE_OAUTH_CLIENT_SECRET)
     context = {
         "app_id": client_secret["web"]["project_id"],
         "client_id": client_secret["web"]["client_id"],
         "picker_api_key": settings.WAGTAILIMAGEIMPORT_GOOGLE_PICKER_API_KEY,
         "collections": collections_to_choose,
+        "drive_parent": drive_parent,
     }
     return render(request, "wagtail_image_import/import.html", context=context)
 
