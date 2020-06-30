@@ -200,6 +200,7 @@ function FileImporter(props) {
         name={imageImport["name"]}
         form={imageImport["form"]}
         error={imageImport["error"]}
+        imported={imageImport["imported"]}
         onFormResponseError={(res) => {
           setImageParam("error", res["error"], index);
           setImageParam("form", res["form"], index);
@@ -239,7 +240,6 @@ function FileImporter(props) {
       <div id="overall-progress" aria-valuenow={Math.round(overallProgress)} class="progress progress-secondary active">
         <div class="bar" style={{ width: overallProgress + "%" }}>{Math.round(overallProgress)+"%"}</div>
       </div>
-      {if }
     <ul id="upload-list" class="upload-list multiple">
       {imageImports
         .filter((imageImport) => !imageImport["finished"])
@@ -272,16 +272,12 @@ function ImageImportDisplay(props) {
           <div class="thumb icon icon-image hasthumb">
             <img src={props.thumbnail} />
           </div>
-          <div class="progress active">
-            <div class="bar" style={{ width: props.progress + "%" }}>
-              {props.progress}%
-            </div>
-          </div>
+          {(props.imported) ? null : <div class="progress active"><div class="bar" style={{ width: props.progress + "%" }}>{props.progress}%</div></div>}
         </div>
       </div>
       <div class="right col9">
         <p>{props.name}</p>
-        {props.error}
+        <p class={(props.error) ? "status-msg failure" : "status-msg success"}>{(props.error || !props.imported) ? props.error : "Image successfully imported. Please update this image with a more appropriate title, if necessary. You may also delete the image completely if the import wasn't required."}</p>
         <form
           method="POST"
           enctype="multipart/form-data"
