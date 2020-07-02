@@ -192,8 +192,12 @@ function FileImporter(props) {
   }, [currentlyImporting]);
 
   function getDisplay(imageImport, index) {
+    if (imageImport.finished) {
+      return null;
+    }
     return (
       <ImageImportDisplay
+        key={imageImport.id}
         imageImport={imageImport}
         onFormResponseError={(res) => {
           setImageParam("error", res["error"], index);
@@ -238,9 +242,7 @@ function FileImporter(props) {
         </div>
       </div>
       <ul id="upload-list" class="upload-list multiple">
-        {imageImports
-          .filter((imageImport) => !imageImport["finished"])
-          .map(getDisplay)}
+        {imageImports.map(getDisplay)}
       </ul>
     </div>
   );
