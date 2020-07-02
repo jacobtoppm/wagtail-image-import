@@ -699,7 +699,7 @@ function DriveSelector(props) {
           q: q,
           pageSize: 1000,
           fields:
-            "nextPageToken, files(id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata, webContentLink)",
+            "nextPageToken, files(id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata)",
         });
         imageData.push(...response.result.files);
       }
@@ -708,7 +708,7 @@ function DriveSelector(props) {
           let response = await gapi.client.drive.files.get({
             fileId: images[index].id,
             fields:
-              "id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata, webContentLink",
+              "id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata",
           });
           imageData.push(response.result);
         }
