@@ -1,0 +1,19 @@
+.image-comparison tbody tr, .image-comparison tbody tr:first-child {
+    border-top: none;
+}
+
+.image-comparison td, .image-comparison thead th {
+    padding-bottom: 0.1em;
+    padding-top: 0.1em;
+    text-transform: none;
+}
+
+.image-comparison thead th {
+    font-weight: bold;
+    text-align: center;
+}
+
+.image-comparison thead, .image-comparison thead tr, .image-comparison thead tr.image-headings, .image-comparison tbody {
+    border-bottom: none;
+    border-top: none;
+}
