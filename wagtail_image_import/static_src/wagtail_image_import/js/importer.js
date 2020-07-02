@@ -363,8 +363,11 @@ function ImportUpdateForm(props) {
       ref={updateForm}
       onSubmit={submitForm}
     >
+      <ul
+        class="fields"
+        dangerouslySetInnerHTML={{ __html: props.imageImport.form }}
+      />
       <ul class="fields">
-        <div dangerouslySetInnerHTML={{ __html: props.imageImport.form }} />
         <li>
           <input
             type="hidden"
