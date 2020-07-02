@@ -17,3 +17,25 @@
     border-bottom: none;
     border-top: none;
 }
+
+.progress .bar {
+    white-space: nowrap;
+    overflow: visible;
+}
+
+.upload-list .status-msg {
+    display: block;
+}
+
+.import-selector {
+    padding-top: 50px;
+    text-align: center;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.button-return {
+    margin-top: 50px;
+    margin-bottom: 50px;
+}

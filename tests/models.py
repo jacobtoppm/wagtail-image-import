@@ -6,7 +6,7 @@ from wagtail_image_import.models import DuplicateFindingMixin
 
 
 class CustomImage(DuplicateFindingMixin, AbstractImage):
-    pass
+    admin_form_fields = Image.admin_form_fields
 
 
 class CustomRendition(AbstractRendition):

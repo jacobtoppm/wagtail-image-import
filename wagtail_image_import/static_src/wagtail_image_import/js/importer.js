@@ -5,16 +5,48 @@ const Icon = window.wagtail.components.Icon;
 function Importer(props) {
   const [selectedImageData, setSelectedImageData] = React.useState([]);
   const [duplicateActions, setDuplicateActions] = React.useState(undefined);
+  const [duplicateData, setDuplicateData] = React.useState(undefined);
+  const [collection, setCollection] = React.useState(props.collections[0][0]);
+
+  function getImageImports() {
+    return selectedImageData
+      .map((data) => {
+        const id = data["id"];
+        const duplicateAction = duplicateActions[id];
+        return (imageImport = {
+          drive_id: id,
+          name: data["name"],
+          progress: 0,
+          action: duplicateActions[id] || "keep",
+          thumbnail: data["thumbnailLink"],
+          wagtail_id:
+            duplicateActions[id] == "replace"
+              ? duplicateData[id]["wagtail_id"]
+              : null,
+        });
+      })
+      .filter((imageImport) => !(imageImport["action"] == "cancel"));
+  }
 
   if (!(selectedImageData && selectedImageData.length)) {
     return (
-      <DriveSelector
-        appId={props.appId}
-        pickerApiKey={props.pickerApiKey}
-        clientId={props.clientId}
-        scope="https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/drive.readonly"
-        onGetImageData={setSelectedImageData}
-      />
+      <React.Fragment>
+        <DriveSelector
+          appId={props.appId}
+          pickerApiKey={props.pickerApiKey}
+          clientId={props.clientId}
+          scope="https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/drive.readonly"
+          onGetImageData={setSelectedImageData}
+          driveParent={props.driveParent || "root"}
+        />
+        <CollectionSelector
+          collections={props.collections}
+          selected={collection}
+          onChange={(e) => {
+            setCollection(e.target.value);
+          }}
+        />
+      </React.Fragment>
     );
   } else if (!duplicateActions) {
     return (
@@ -22,11 +54,337 @@ function Importer(props) {
         imageData={selectedImageData}
         duplicateReviewUrl={props.duplicateReviewUrl}
         onConfirmDuplicateActions={setDuplicateActions}
+        onGetDuplicateData={setDuplicateData}
       />
     );
   } else {
-    return <p>Upload time!</p>;
+    return (
+      <FileImporter
+        imageImports={getImageImports()}
+        csrfToken={props.csrfToken}
+        collection={collection}
+        tagitOpts={props.tagitOpts}
+        indexUrl={props.indexUrl}
+      />
+    );
   }
+}
+
+function CollectionSelector(props) {
+  return (
+    <div class="field nice-padding import-selector">
+      <label for="id_addimage_collection">Add to collection:</label>
+      <div class="field-content">
+        <select
+          id="id_addimage_collection"
+          name="collection"
+          value={props.selected}
+          onChange={props.onChange}
+        >
+          {props.collections.map((collection) => {
+            return <option value={collection[0]}>{collection[1]}</option>;
+          })}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+function FileImporter(props) {
+  const [currentlyImporting, setCurrentlyImporting] = React.useState(false);
+  const [imageImports, setImageImports] = React.useState(props.imageImports);
+  const oauthToken = gapi.auth2
+    .getAuthInstance()
+    .currentUser.get()
+    .getAuthResponse().access_token;
+
+  function setImageParam(paramName, paramValue, index) {
+    let newImageImports = [...imageImports];
+    newImageImports[index][paramName] = paramValue;
+    setImageImports(newImageImports);
+  }
+
+  function startImport(newImport, index) {
+    setCurrentlyImporting(true);
+    var imageRequest = new XMLHttpRequest();
+    imageRequest.addEventListener("load", (e) => {
+      setImageParam("progress", 50, index);
+      uploadToWagtail(
+        new File([imageRequest.response], newImport["name"]),
+        newImport,
+        index
+      );
+    });
+    imageRequest.addEventListener("error", () => {
+      setImageParam("progress", 0, index);
+      setCurrentlyImporting(false);
+      setImageParam("error", "Failed to import from Google", index);
+    });
+    imageRequest.addEventListener("progress", (e) => {
+      if (e.lengthComputable) {
+        setImageParam(
+          "progress",
+          Math.round((100 * e.loaded) / (2 * e.total)),
+          index
+        );
+      }
+    });
+    imageRequest.open(
+      "GET",
+      "https://www.googleapis.com/drive/v3/files/" +
+        newImport["drive_id"] +
+        "?alt=media"
+    );
+    imageRequest.responseType = "blob";
+    imageRequest.setRequestHeader("Authorization", "Bearer " + oauthToken);
+    imageRequest.send();
+  }
+
+  function uploadToWagtail(imageFile, newImport, index) {
+    let formData = new FormData();
+    formData.append("drive_id", newImport["drive_id"]);
+    formData.append("wagtail_id", newImport["wagtail_id"]);
+    formData.append("action", newImport["action"]);
+    formData.append("name", newImport["name"]);
+    formData.append("collection", props.collection);
+    formData.append("image_file", imageFile);
+    var request = new XMLHttpRequest();
+    request.addEventListener("load", async (e) => {
+      let res = await request.response;
+      res = JSON.parse(res);
+      setImageParam("imported", true, index);
+      setCurrentlyImporting(false);
+      setImageParam("error", res["error"], index);
+      setImageParam("form", res["form"], index);
+      setImageParam("edit_action", res["edit_action"], index);
+      setImageParam("delete_action", res["delete_action"], index);
+      setImageParam("progress", 100, index);
+    });
+    request.addEventListener("error", async (e) => {
+      setCurrentlyImporting(false);
+      setImageParam("error", "Failed to upload to Wagtail", index);
+    });
+    request.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable) {
+        setImageParam(
+          "progress",
+          Math.round(50 + (100 * e.loaded) / (2 * e.total)),
+          index
+        );
+      }
+    });
+    request.open("POST", window.location);
+    request.setRequestHeader("X-CSRFToken", props.csrfToken);
+    request.setRequestHeader("HTTP_X_REQUESTED_WITH", "XMLHttpRequest");
+    request.send(formData);
+  }
+
+  React.useEffect(() => {
+    // start import if not currently importing
+    if (!currentlyImporting) {
+      const nextImportIndex = imageImports.findIndex(
+        (imageImport) => !imageImport["error"] && !imageImport["imported"]
+      );
+      const nextImport = imageImports[nextImportIndex];
+      if (nextImport) {
+        startImport(nextImport, nextImportIndex);
+      }
+    }
+  }, [currentlyImporting]);
+
+  function getDisplay(imageImport, index) {
+    if (imageImport.finished) {
+      return null;
+    }
+    return (
+      <ImageImportDisplay
+        key={imageImport.id}
+        imageImport={imageImport}
+        onFormResponseError={(res) => {
+          setImageParam("error", res["error"], index);
+          setImageParam("form", res["form"], index);
+          setImageParam("edit_action", res["edit_action"], index);
+          setImageParam("delete_action", res["delete_action"], index);
+        }}
+        onFormResponseSuccess={(res) => {
+          setImageParam("finished", true, index);
+          setImageParam("error", res["error"], index);
+          setImageParam("form", res["form"], index);
+          setImageParam("edit_action", res["edit_action"], index);
+          setImageParam("delete_action", res["delete_action"], index);
+        }}
+        onDeleteResponseLoad={(res) => {
+          setImageParam("finished", true, index);
+          setImageParam("error", res["error"], index);
+          setImageParam("form", res["form"], index);
+          setImageParam("edit_action", res["edit_action"], index);
+          setImageParam("delete_action", res["delete_action"], index);
+        }}
+        csrfToken={props.csrfToken}
+        tagitOpts={props.tagitOpts}
+      />
+    );
+  }
+
+  const overallProgress = imageImports.reduce((total, imageImport) => {
+    return total + imageImport.progress / imageImports.length;
+  }, 0);
+
+  const imageList = imageImports.map(getDisplay);
+
+  return (
+    <div class="nice-padding">
+      <h2>Image import</h2>
+      <div
+        id="overall-progress"
+        aria-valuenow={Math.round(overallProgress)}
+        class="progress progress-secondary active"
+      >
+        <div class="bar" style={{ width: overallProgress + "%" }}>
+          {Math.round(overallProgress) + "%"}
+        </div>
+      </div>
+      {imageList.filter((value) => {
+        return value !== null;
+      }).length > 0 ? (
+        <ul id="upload-list" class="upload-list multiple">
+          {imageList}
+        </ul>
+      ) : (
+        <a href={props.indexUrl} class="button button-return">
+          Return to image index
+        </a>
+      )}
+    </div>
+  );
+}
+
+function ImageImportDisplay(props) {
+  return (
+    <li class="row upload-uploading">
+      <div class="left col3">
+        <div class="preview">
+          <div class="thumb icon icon-image hasthumb">
+            <img src={props.imageImport.thumbnail} />
+          </div>
+          {props.imageImport.imported ? null : (
+            <div class="progress active">
+              <div
+                class="bar"
+                style={{ width: props.imageImport.progress + "%" }}
+              >
+                {props.imageImport.progress}%
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      <div class="right col9">
+        <p>{props.imageImport.name}</p>
+        <p
+          class={
+            props.imageImport.error
+              ? "status-msg failure"
+              : "status-msg success"
+          }
+        >
+          {props.imageImport.error || !props.imageImport.imported
+            ? props.imageImport.error
+            : "Image successfully imported. Please update this image with a more appropriate title, if necessary. You may also delete the image completely if the import wasn't required."}
+        </p>
+        {props.imageImport.form ? (
+          <ImportUpdateForm
+            imageImport={props.imageImport}
+            onFormResponseError={props.onFormResponseError}
+            onFormResponseSuccess={props.onFormResponseSuccess}
+            onDeleteResponseLoad={props.onDeleteResponseLoad}
+            csrfToken={props.csrfToken}
+            tagitOpts={props.tagitOpts}
+          />
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+function ImportUpdateForm(props) {
+  const updateForm = React.useRef(null);
+
+  React.useLayoutEffect(() => {
+    // initialise tag fields
+    if (updateForm.current) {
+      const field = $(".tag_field input", updateForm.current);
+      if (field) {
+        field.tagit(props.tagitOpts);
+        return () => {
+          field.tagit("destroy");
+        };
+      }
+    }
+  }, [props.imageImport.form]);
+
+  function submitForm(e) {
+    e.preventDefault();
+    var request = new XMLHttpRequest();
+    request.addEventListener("load", async (e) => {
+      e.preventDefault();
+      res = await request.response;
+      res = JSON.parse(res);
+      if (res["error"]) {
+        props.onFormResponseError(res);
+      } else {
+        props.onFormResponseSuccess(res);
+      }
+    });
+    request.open("POST", props.imageImport.edit_action);
+    request.setRequestHeader("X-CSRFToken", props.csrfToken);
+    request.setRequestHeader("HTTP_X_REQUESTED_WITH", "XMLHttpRequest");
+    request.send(new FormData(e.target));
+  }
+  function deleteImage(e) {
+    e.preventDefault();
+    var request = new XMLHttpRequest();
+    request.addEventListener("load", async (e) => {
+      e.preventDefault();
+      res = await request.response;
+      res = JSON.parse(res);
+      props.onDeleteResponseLoad(res);
+    });
+    request.open("POST", props.imageImport.edit_action);
+    request.setRequestHeader("X-CSRFToken", props.csrfToken);
+    request.setRequestHeader("HTTP_X_REQUESTED_WITH", "XMLHttpRequest");
+    request.send();
+  }
+  return (
+    <form
+      method="POST"
+      enctype="multipart/form-data"
+      novalidate
+      ref={updateForm}
+      onSubmit={submitForm}
+    >
+      <ul
+        class="fields"
+        dangerouslySetInnerHTML={{ __html: props.imageImport.form }}
+      />
+      <ul class="fields">
+        <li>
+          <input
+            type="hidden"
+            name="drive_id"
+            value={props.imageImport.driveId}
+          />
+          <input type="submit" value="Update" class="button" />
+          <button
+            class="delete button button-secondary no"
+            onClick={deleteImage}
+          >
+            Delete
+          </button>
+        </li>
+      </ul>
+    </form>
+  );
 }
 
 function DuplicateIdentifier(props) {
@@ -47,6 +405,7 @@ function DuplicateIdentifier(props) {
         if (res.ok) {
           res.json().then((res_json) => {
             setPotentialDuplicates(res_json);
+            props.onGetDuplicateData(res_json);
             let duplicateIds = Object.keys(res_json);
             // set default actions
             let actions = {};
@@ -302,7 +661,7 @@ function DriveSelector(props) {
     let docsView = new google.picker.DocsView(google.picker.ViewId.DOCS_IMAGES);
     docsView.setSelectFolderEnabled(true);
     docsView.setIncludeFolders(true);
-    docsView.setParent("root");
+    docsView.setParent(props.driveParent);
 
     let picker = new google.picker.PickerBuilder()
       .setAppId(props.appId)
@@ -366,7 +725,7 @@ function DriveSelector(props) {
 
   if (apiLoaded) {
     return (
-      <div class="nice-padding">
+      <div class="nice-padding import-selector">
         <button class="button bicolor icon icon-plus" onClick={pick}>
           Select an image or folder in Drive
         </button>
@@ -374,7 +733,7 @@ function DriveSelector(props) {
     );
   } else {
     return (
-      <div class="nice-padding">
+      <div class="nice-padding import-selector">
         <LoadingSpinner message="Loading Google API" />
       </div>
     );
@@ -395,6 +754,13 @@ ReactDOM.render(
     pickerApiKey={domContainer.dataset.pickerApiKey}
     clientId={domContainer.dataset.clientId}
     duplicateReviewUrl={domContainer.dataset.duplicateReviewUrl}
+    csrfToken={document.querySelector("[name=csrfmiddlewaretoken]").value}
+    collections={JSON.parse(domContainer.dataset.collections)}
+    tagitOpts={{
+      autocomplete: { source: domContainer.dataset.autocompleteUrl },
+    }}
+    driveParent={domContainer.dataset.driveParent}
+    indexUrl={domContainer.dataset.indexUrl}
   />,
   domContainer
 );
