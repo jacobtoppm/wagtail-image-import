@@ -9,9 +9,17 @@ def get_most_likely_duplicate(drive_image_info, field_mapping, field_weighting):
     drive_image_info = flatten(drive_image_info)
 
     for drive_field, db_field in field_mapping.items():
-        field_filter = Q(**{db_field: drive_image_info[drive_field]})
+        value = drive_image_info.get(drive_field, None)
+        if not value:
+            # don't find duplicates for empty data, likely to match too many
+            continue
+        field_filter = Q(**{db_field: value})
         filters[db_field] = field_filter
         or_filter = or_filter | field_filter
+
+    if not filters:
+        # if no filters are applied, no duplicates exist
+        return None
 
     qs = get_image_model().objects.select_related("driveidmapping").filter(or_filter)
     # find images matching any of the fields
