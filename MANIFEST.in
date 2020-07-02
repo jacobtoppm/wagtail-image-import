@@ -1,0 +1,3 @@
+
+recursive-include wagtail_image_import/static/ *
+recursive-include wagtail_image_import/templates/ *
