@@ -45,14 +45,22 @@ Wagtail Image Import will attempt to identify the most likely duplicate of an im
 If you are using a [custom image model](https://docs.wagtail.io/en/latest/advanced_topics/images/custom_image_model.html), you can also add the `wagtail_image_import.models.DuplicateFindingMixin` to your custom model, which exposes the EXIF datetime and md5 hash for even better duplicate identification. An example of adding this to a very basic custom image model is shown below:
 
 ```
-
-from wagtail.images.models import Image, AbstractImage
+from wagtail.images.models import Image, AbstractImage, AbstractRendition
 
 from wagtail_image_import.models import DuplicateFindingMixin
 
 
 class CustomImage(DuplicateFindingMixin, AbstractImage):
     admin_form_fields = Image.admin_form_fields
+
+
+class CustomRendition(AbstractRendition):
+    image = models.ForeignKey(
+        CustomImage, on_delete=models.CASCADE, related_name="renditions"
+    )
+
+    class Meta:
+        unique_together = (("image", "filter_spec", "focal_point_key"),)
 ```
 
 If you choose to add the mixin and have existing image data, you will need to call `save()` on all existing instances to fill in the new fields. This can be done in the Django shell:
