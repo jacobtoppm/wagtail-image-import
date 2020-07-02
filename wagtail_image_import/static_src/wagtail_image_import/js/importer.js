@@ -64,6 +64,7 @@ function Importer(props) {
         csrfToken={props.csrfToken}
         collection={collection}
         tagitOpts={props.tagitOpts}
+        indexUrl={props.indexUrl}
       />
     );
   }
@@ -229,6 +230,8 @@ function FileImporter(props) {
     return total + imageImport.progress / imageImports.length;
   }, 0);
 
+  const imageList = imageImports.map(getDisplay);
+
   return (
     <div class="nice-padding">
       <h2>Image import</h2>
@@ -241,9 +244,17 @@ function FileImporter(props) {
           {Math.round(overallProgress) + "%"}
         </div>
       </div>
-      <ul id="upload-list" class="upload-list multiple">
-        {imageImports.map(getDisplay)}
-      </ul>
+      {imageList.filter((value) => {
+        return value !== null;
+      }).length > 0 ? (
+        <ul id="upload-list" class="upload-list multiple">
+          {imageList}
+        </ul>
+      ) : (
+        <a href={props.indexUrl} class="button button-return">
+          Return to image index
+        </a>
+      )}
     </div>
   );
 }
@@ -746,6 +757,7 @@ ReactDOM.render(
       autocomplete: { source: domContainer.dataset.autocompleteUrl },
     }}
     driveParent={domContainer.dataset.driveParent}
+    indexUrl={domContainer.dataset.indexUrl}
   />,
   domContainer
 );
