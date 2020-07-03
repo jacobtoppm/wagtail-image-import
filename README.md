@@ -1,5 +1,5 @@
 # wagtail-image-import
-Adds image import from Google Drive, including identifying potential duplicates, to the Wagtail Admin
+Adds image import from Google Drive, including identifying potential duplicates, to the Wagtail Admin.
 
 ## Installation
 
@@ -9,7 +9,7 @@ Add to `INSTALLED_APPS` in your settings file above `wagtail.admin`
 
 Wagtail Image Import relies on Google APIs, which you will first need to enable for your project:
 
-1. Navigate to the [Google API Library](https://console.developers.google.com/apis/library). Select a project for your Wagtail site, or create a new one now.
+1. Navigate to the [Google API Library](https://console.developers.google.com/apis/library). Select a project for your Wagtail site, or create a new one.
 
 2. Find and enable the [Google Docs](https://console.developers.google.com/apis/library/docs.googleapis.com) and [Google Drive](https://console.developers.google.com/apis/library/drive.googleapis.com) APIs.
     
@@ -29,7 +29,7 @@ Wagtail Image Import relies on Google APIs, which you will first need to enable 
         
     3. Add your domain to `Authorised domains`.
 
- 7. For `Application type`, choose `Web application`
+ 7. For `Application type`, choose `Web application`.
 
  8. Under `Authorised JavaScript origins`, add your domain.
 
@@ -44,7 +44,7 @@ Wagtail Image Import will attempt to identify the most likely duplicate of an im
 
 If you are using a [custom image model](https://docs.wagtail.io/en/latest/advanced_topics/images/custom_image_model.html), you can also add the `wagtail_image_import.models.DuplicateFindingMixin` to your custom model, which exposes the EXIF datetime and md5 hash for even better duplicate identification. An example of adding this to a very basic custom image model is shown below:
 
-```
+```python
 from wagtail.images.models import Image, AbstractImage, AbstractRendition
 
 from wagtail_image_import.models import DuplicateFindingMixin
@@ -65,7 +65,7 @@ class CustomRendition(AbstractRendition):
 
 If you choose to add the mixin and have existing image data, you will need to call `save()` on all existing instances to fill in the new fields. This can be done in the Django shell:
 
-```
+```python
 from wagtail.images import get_image_model
 
 for image in get_image_model().objects.all():
@@ -76,14 +76,14 @@ In order to adjust the duplicate finding process, you can use the
 `WAGTAILIMAGEIMPORT_FIELD_MAPPING` and `WAGTAILIMAGEIMPORT_FIELD_WEIGHTING` settings. 
 
 `WAGTAILIMAGEIMPORT_FIELD_MAPPING` maps Google Drive field names to the database field names. By default, it is:
-```
+```python
 {
     "id": "driveidmapping__drive_id",
     "name": "title",
 }
 ```
 If you add the mixin, use:
-```
+```python
 {
     "id": "driveidmapping__drive_id", 
     "name": "title",
@@ -95,7 +95,7 @@ If you add the mixin, use:
 To map the new fields. (If you have additional custom fields, the full list of Drive fields is: `'id', 'name', 'thumbnailLink', 'fileExtension' 'md5Checksum', 'size', 'imageMediaMetadata__width', 'imageMediaMetadata__height', 'imageMediaMetadata__rotation', 'imageMediaMetadata__time`, though not all may be present on every image)
 
 To adjust the field weighting - their relative importance in finding the most likely duplicate - you can set `WAGTAILIMAGEIMPORT_FIELD_WEIGHTING`, which maps database fields to weightings. The default is:
-```
+```python
 {
     "driveidmapping__drive_id": 10, 
     "md5Checksum": 5, 
