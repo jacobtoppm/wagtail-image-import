@@ -17,7 +17,7 @@ jobs:
           paths:
             - "~/.cache/pip"
       - run:
-          command: ./runtests.py
+          command: python runtests.py
           name: Test
 
 workflows:
