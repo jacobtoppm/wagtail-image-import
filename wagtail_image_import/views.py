@@ -35,7 +35,7 @@ def import_from_drive(request):
     collections_to_choose = json.dumps(
         [
             (collection.id, collection.name)
-            for collection in Collection.order_for_display(collections)
+            for collection in collections
         ]
     )
     Image = get_image_model()
