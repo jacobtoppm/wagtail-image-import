@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="wagtail_image_import",
-    version="0.0.2",
+    version="0.0.3",
     author="Jacob Topp-Mugglestone",
     author_email="jacobtm3@googlemail.com",
     description="Adds bulk image imports from Google Drive to the Wagtail Admin",
