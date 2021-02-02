@@ -175,7 +175,7 @@ function FileImporter(props) {
     });
     request.open("POST", window.location);
     request.setRequestHeader("X-CSRFToken", props.csrfToken);
-    request.setRequestHeader("HTTP_X_REQUESTED_WITH", "XMLHttpRequest");
+    request.setRequestHeader("X-Requested-With", "XMLHttpRequest");
     request.send(formData);
   }
 
@@ -250,11 +250,12 @@ function FileImporter(props) {
         <ul id="upload-list" class="upload-list multiple">
           {imageList}
         </ul>
-      ) : (
+      ) : null}
+      {overallProgress === 100 ? (
         <a href={props.indexUrl} class="button button-return">
           Return to image index
         </a>
-      )}
+      ): null}
     </div>
   );
 }
@@ -338,7 +339,7 @@ function ImportUpdateForm(props) {
     });
     request.open("POST", props.imageImport.edit_action);
     request.setRequestHeader("X-CSRFToken", props.csrfToken);
-    request.setRequestHeader("HTTP_X_REQUESTED_WITH", "XMLHttpRequest");
+    request.setRequestHeader("X-Requested-With", "XMLHttpRequest");
     request.send(new FormData(e.target));
   }
   function deleteImage(e) {
@@ -350,9 +351,9 @@ function ImportUpdateForm(props) {
       res = JSON.parse(res);
       props.onDeleteResponseLoad(res);
     });
-    request.open("POST", props.imageImport.edit_action);
+    request.open("POST", props.imageImport.delete_action);
     request.setRequestHeader("X-CSRFToken", props.csrfToken);
-    request.setRequestHeader("HTTP_X_REQUESTED_WITH", "XMLHttpRequest");
+    request.setRequestHeader("X-Requested-With", "XMLHttpRequest");
     request.send();
   }
   return (
@@ -376,6 +377,7 @@ function ImportUpdateForm(props) {
           />
           <input type="submit" value="Update" class="button" />
           <button
+            type="button"
             class="delete button button-secondary no"
             onClick={deleteImage}
           >
