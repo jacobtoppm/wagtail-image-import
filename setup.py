@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="wagtail_image_import",
-    version="0.0.3",
+    version="0.1.0",
     author="Jacob Topp-Mugglestone",
     author_email="jacobtm3@googlemail.com",
     description="Adds bulk image imports from Google Drive to the Wagtail Admin",
@@ -14,7 +14,7 @@ setuptools.setup(
     url="https://github.com/jacobtoppm/wagtail_draftail_anchors",
     packages=setuptools.find_packages(),
     include_package_data=True,
-    install_requires=["wagtail>=2.11",],
+    install_requires=["wagtail>=2.12",],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

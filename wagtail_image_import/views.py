@@ -14,10 +14,9 @@ from django.views.decorators.http import require_POST
 
 from wagtail.core.models import Collection
 from wagtail.images import get_image_model
-from wagtail.images.forms import get_image_form
+from wagtail.images.forms import get_image_form, get_image_multi_form
 from wagtail.images.models import UploadedImage
 from wagtail.images.permissions import permission_policy
-from wagtail.images.views.multiple import get_image_edit_form
 from wagtail.search.backends import get_search_backends
 
 from .models import DriveIDMapping
@@ -96,7 +95,7 @@ def import_from_drive(request):
                         "wagtail_image_import/edit_form.html",
                         {
                             "image": image,
-                            "form": get_image_edit_form(Image)(
+                            "form": get_image_multi_form(Image)(
                                 instance=image,
                                 prefix="image-%d" % image.id,
                                 user=request.user,
@@ -147,7 +146,7 @@ def import_from_drive(request):
                         "wagtail_image_import/edit_form.html",
                         {
                             "uploaded_image": uploaded_image,
-                            "form": get_image_edit_form(Image)(
+                            "form": get_image_multi_form(Image)(
                                 instance=image,
                                 prefix="uploaded-image-%d" % uploaded_image.id,
                                 user=request.user,
@@ -179,7 +178,7 @@ def import_from_drive(request):
 @require_POST
 def create_from_uploaded_image(request, uploaded_image_id):
     Image = get_image_model()
-    ImageForm = get_image_edit_form(Image)
+    ImageForm = get_image_multi_form(Image)
 
     uploaded_image = get_object_or_404(UploadedImage, id=uploaded_image_id)
 
@@ -249,7 +248,7 @@ def create_from_uploaded_image(request, uploaded_image_id):
 @require_POST
 def edit(request, image_id, callback=None):
     Image = get_image_model()
-    ImageForm = get_image_edit_form(Image)
+    ImageForm = get_image_multi_form(Image)
 
     image = get_object_or_404(Image, id=image_id)
 
