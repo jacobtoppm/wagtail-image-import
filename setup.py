@@ -11,7 +11,7 @@ setuptools.setup(
     description="Adds bulk image imports from Google Drive to the Wagtail Admin",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/jacobtoppm/wagtail_draftail_anchors",
+    url="https://github.com/jacobtoppm/wagtail-image-import/",
     packages=setuptools.find_packages(),
     include_package_data=True,
     install_requires=["wagtail>=2.12",],
