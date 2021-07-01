@@ -3,7 +3,7 @@ Adds image import from Google Drive, including identifying potential duplicates,
 
 ## Installation
 
-Add to `INSTALLED_APPS` in your settings file above `wagtail.admin`
+Add ``"wagtail_image_import",`` to `INSTALLED_APPS` in your settings file above `wagtail.admin`
 
 ## Setup
 
