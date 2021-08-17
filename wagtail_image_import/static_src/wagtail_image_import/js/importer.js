@@ -19,6 +19,7 @@ function Importer(props) {
           progress: 0,
           action: duplicateActions[id] || "keep",
           thumbnail: data["thumbnailLink"],
+          resourceKey: data["resourceKey"],
           wagtail_id:
             duplicateActions[id] == "replace"
               ? duplicateData[id]["wagtail_id"]
@@ -137,6 +138,10 @@ function FileImporter(props) {
     );
     imageRequest.responseType = "blob";
     imageRequest.setRequestHeader("Authorization", "Bearer " + oauthToken);
+    const resourceKey = newImport["resourceKey"]
+    if (resourceKey) {
+      imageRequest.setRequestHeader("X-Goog-Drive-Resource-Keys", `${newImport["drive_id"]/resourceKey}`);
+    }
     imageRequest.send();
   }
 
@@ -701,7 +706,7 @@ function DriveSelector(props) {
           q: q,
           pageSize: 1000,
           fields:
-            "nextPageToken, files(id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata)",
+            "nextPageToken, files(id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata, resourceKey)",
         });
         imageData.push(...response.result.files);
       }
@@ -710,7 +715,7 @@ function DriveSelector(props) {
           let response = await gapi.client.drive.files.get({
             fileId: images[index].id,
             fields:
-              "id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata",
+              "id, name, thumbnailLink, fileExtension, md5Checksum, size, imageMediaMetadata, resourceKey",
           });
           imageData.push(response.result);
         }
